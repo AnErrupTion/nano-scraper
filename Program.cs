@@ -65,7 +65,6 @@ namespace B3RAP_Leecher_v3
         {
             Console.Title = "Loading...";
             Console.OutputEncoding = Encoding.Unicode;
-
             try
             {
                 engines = File.ReadAllLines($"settings/{nameof(engines)}.txt");
