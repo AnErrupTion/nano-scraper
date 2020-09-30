@@ -69,6 +69,7 @@ namespace B3RAP_Leecher_v3
             try
             {
                 engines = File.ReadAllLines($"settings/{nameof(engines)}.txt");
+                Console.WriteLine($"settings/{nameof(engines)}.txt");
                 websites = File.ReadAllLines($"settings/{nameof(websites)}.txt");
                 keywords = File.ReadAllLines($"settings/{nameof(keywords)}.txt");
                 config.ReadFile();
@@ -121,7 +122,12 @@ namespace B3RAP_Leecher_v3
                 "You can have multiple settings file. :O",
                 "nαnσ sσftɯαɾҽs was previously named B3RAP Softwares!",
                 "B3RAP ProxyScrap (private) was the first program developed under the name B3RAP Softwares.",
-                "AnErrupTion, the creator of nαnσ sσftɯαɾҽs, loves privacy so much he has an XMPP account! (anerruption@disroot.org)"
+                "AnErrupTion, the creator of nαnσ sσftɯαɾҽs, loves privacy so much he has an XMPP account! (anerruption@disroot.org)",
+                "This is just the beginning...",
+                "Handmade since it was handmade :)",
+                "Hail Stackoverflow!",
+                "Slayer Leecher's only real competitor",
+                "Simplicity within."
             };
 
             if (args.Length == 0 || args[0] != "--notips")
