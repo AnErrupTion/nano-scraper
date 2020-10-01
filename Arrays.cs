@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace B3RAP_Leecher_v3
 {
@@ -12,11 +13,9 @@ namespace B3RAP_Leecher_v3
             return arr;
         }
 
-        public static List<string> Clean(this IEnumerable<string> array)
+        public static IEnumerable<string> Clean(this IEnumerable<string> array)
         {
-            List<string> result = new List<string>();
-            foreach (string line in array) if (!result.Contains(line) && line.Length > 5) result.Add(line);
-            return result;
+            return array.FastRemoveDupes().Where(x => x.Length > 5);
         }
     }
 }
