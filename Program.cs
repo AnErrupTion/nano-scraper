@@ -1,20 +1,19 @@
 using System;
 using Leaf.xNet;
 using System.IO;
-using System.Security.Authentication;
 using System.Text.RegularExpressions;
 using System.Linq;
-using System.Collections.Generic;
 using System.Data;
 using System.Threading;
 using System.Text;
+using System.Collections.Generic;
 
 namespace B3RAP_Leecher_v3
 {
     class Program
     {
         // Basic stuff
-        private static string[] engines, websites, keywords;
+        private static IEnumerable<string> engines, websites, keywords;
 
         // Version of the scraper
         public static readonly string Version = "1.1";
@@ -39,17 +38,17 @@ namespace B3RAP_Leecher_v3
         // Settings
         private static string pattern, scrapingType, customRegex, proxyType;
         private static int retries, timeout, writeErrorWaitTime;
-        private static string[] proxies, customLinks;
-        private static bool past24Hours, showErrors, logErrors,  removeDupes;
+        private static IEnumerable<string> proxies, customLinks;
+        private static bool past24Hours, showErrors, logErrors, removeDupes, wait2Seconds;
 
         private static string path;
         private static readonly string logPath = "logs.txt";
 
         private static ProxyClient RandomProxy()
         {
-            again: if (proxies == null || proxies.Length == 0) return null;
+            again: if (proxies == null || proxies.Count() == 0) return null;
 
-            string proxy = proxies[rand.Next(proxies.Length)];
+            string proxy = proxies.ElementAt(rand.Next(proxies.Count()));
 
             ProxyType type = ProxyType.HTTP;
             if (proxyType == "http") type = ProxyType.HTTP;
@@ -57,11 +56,11 @@ namespace B3RAP_Leecher_v3
             else if (proxyType == "socks5") type = ProxyType.Socks5;
 
             bool result = ProxyClient.TryParse(type, proxy, out ProxyClient client);
-            if (result) return client; else
+            if (result) return client;
+            else
             {
                 string error = $"The proxy {proxy} is bad, trying a new one...";
-                log(error, 2);
-                //error.ColorWriteLine(ConsoleUtils.BadColor);
+                ConsoleUtils.Log(error, 2);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 goto again;
             }
@@ -71,18 +70,18 @@ namespace B3RAP_Leecher_v3
         {
             Console.Title = "Loading...";
             Console.OutputEncoding = Encoding.Unicode;
+
             try
             {
-                engines = File.ReadAllLines($"settings/{nameof(engines)}.txt");
-                websites = File.ReadAllLines($"settings/{nameof(websites)}.txt");
-                keywords = File.ReadAllLines($"settings/{nameof(keywords)}.txt");
+                engines = File.ReadLines($"settings/{nameof(engines)}.txt");
+                websites = File.ReadLines($"settings/{nameof(websites)}.txt");
+                keywords = File.ReadLines($"settings/{nameof(keywords)}.txt");
                 config.ReadFile();
             }
             catch
             {
                 string error = "Could not read important files, exiting.";
-                log(error, 2);                                  //NEW
-                //error.ColorWriteLine(ConsoleUtils.BadColor);    //OLD
+                ConsoleUtils.Log(error, 2);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 Thread.Sleep(2000);
                 Environment.Exit(1);
@@ -106,7 +105,7 @@ namespace B3RAP_Leecher_v3
                 else
                 {
                     pattern = EasyPattern.Parse(pattern);
-                    "[!] PLEASE NOTE THAT EASY PATTERN DOESN'T WORK YET, SO PLEASE DON'T USE IT.".ColorWriteLine(ConsoleColor.Yellow);
+                    ConsoleUtils.Log("Please note that Easy Pattern doesn't work yet, so please don't use it.", 0);
                 }
                 retries = config.ParseInteger("retries");
                 timeout = config.ParseInteger("timeout") * 1000;
@@ -116,14 +115,14 @@ namespace B3RAP_Leecher_v3
                 past24Hours = config.ParseBoolean("past_24_hours");
                 showErrors = config.ParseBoolean("show_errors");
                 logErrors = config.ParseBoolean("log_errors");
-                writeErrorWaitTime = config.ParseInteger("write_error_wait_time");
+                writeErrorWaitTime = config.ParseInteger("write_error_wait_time") * 1000;
                 removeDupes = config.ParseBoolean("remove_duplicates");
+                wait2Seconds = config.ParseBoolean("wait_2_seconds_before_continue");
             }
             catch
             {
                 string error = "Failed to parse settings, exiting.";
-                log(error, 2);
-                //error.ColorWriteLine(ConsoleUtils.BadColor);
+                ConsoleUtils.Log(error, 2);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 Thread.Sleep(2000);
                 Environment.Exit(1);
@@ -145,9 +144,8 @@ namespace B3RAP_Leecher_v3
 
             if (args.Length == 0 || args[0] != "--notips")
             {
-                "Did you know?".ColorWriteLine(ConsoleColor.Cyan);
-                facts[rand.Next(facts.Length)].ColorWriteLine(ConsoleColor.Yellow);
-                Thread.Sleep(5000);
+                ConsoleUtils.Log($"Did you know?\n{facts[rand.Next(facts.Length)]}", 0);
+                Thread.Sleep(3000);
             }
 
             Console.Clear();
@@ -155,12 +153,10 @@ namespace B3RAP_Leecher_v3
 
             fileInt = rand.Next();
             path = $"results/{scrapingType}-{fileInt}.txt";
-            if (!Directory.Exists("results"))
-                Directory.CreateDirectory("results");
 
             again: try
             {
-                if (customLinks != null && customLinks.Length > 0) ScrapeResult(customLinks, null);
+                if (customLinks != null && customLinks.Count() > 0) ScrapeResult(customLinks, null);
                 else
                     foreach (string engine in engines)
                         foreach (string website in websites)
@@ -176,10 +172,9 @@ namespace B3RAP_Leecher_v3
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                log(error, 2);
-                //error.ColorWriteLine(ConsoleUtils.BadColor);
+                ConsoleUtils.Log(error, 2);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) error.ColorWriteLine(ConsoleUtils.BadColor);
+                if (showErrors) ConsoleUtils.Log(error, 2);
 
                 errors++;
                 if (retries > 0)
@@ -210,10 +205,18 @@ namespace B3RAP_Leecher_v3
 
                 if (removeDupes && File.Exists(path))
                 {
-                    log($"Removing duplicates...", 0);
+                    ConsoleUtils.Log("Removing duplicates...", 0);
                     var lines = File.ReadLines(path).Clean();
                     File.WriteAllLines(path, lines);
-                    $"[*] Duplicates removed, you can safely close this window if you want to stop scraping now.".ColorWriteLine(ConsoleColor.Cyan);
+
+                    string text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
+                    if (wait2Seconds)
+                    {
+                        text += " Waiting 2 seconds before continuing...";
+                        ConsoleUtils.Log(text, 1);
+                        Thread.Sleep(2000);
+                    }
+                    else ConsoleUtils.Log(text, 1);
                 }
 
                 using HttpRequest req = new HttpRequest
@@ -240,7 +243,7 @@ namespace B3RAP_Leecher_v3
                 req.SslCertificateValidatorCallback += (sender, certificate, chain, sslPolicyErrors) => true;
                 req.AddHeader("Accept", "*/*");
 
-                log("Scraping links...", 0);
+                ConsoleUtils.Log("Scraping links...", 0);
 
                 var response = req.Get($"{engine}{keyword}+site:{website}").ToString();
                 var regex = Regex.Matches(response, $@"(https:\/\/{website}\/\w+)");
@@ -248,17 +251,16 @@ namespace B3RAP_Leecher_v3
                 if (regex.Count > 0)
                 {
                     var links = regex.OfType<Match>().Select(m => m.Value).FastRemoveDupes();
-                    log($"Got {links.Length} links, scraping result...", 1);
+                    ConsoleUtils.Log($"Got {links.Count()} links, scraping result...", 0);
                     ScrapeResult(links, req);
                 }
             }
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                log(error, 2);
-                //error.ColorWriteLine(ConsoleUtils.BadColor);
+                ConsoleUtils.Log(error, 2);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) error.ColorWriteLine(ConsoleUtils.BadColor);
+                if (showErrors) ConsoleUtils.Log(error, 2);
 
                 errors++;
                 if (retries > 0)
@@ -270,7 +272,7 @@ namespace B3RAP_Leecher_v3
             }
         }
 
-        private static void ScrapeResult(string[] links, HttpRequest req)
+        private static void ScrapeResult(IEnumerable<string> links, HttpRequest req)
         {
             again: try
             {
@@ -296,10 +298,9 @@ namespace B3RAP_Leecher_v3
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                log(error, 2);
-                //error.ColorWriteLine(ConsoleUtils.BadColor);
+                ConsoleUtils.Log(error, 2);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) error.ColorWriteLine(ConsoleUtils.BadColor);
+                if (showErrors) ConsoleUtils.Log(error, 2);
 
                 errors++;
                 if (retries > 0)
@@ -316,22 +317,21 @@ namespace B3RAP_Leecher_v3
             again: try
             {
                 if (scrapingType == "emailpass") GetResult(response,
-                @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5}):([a-zA-Z0-9_\-\.]+)", "combos");
+                @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6}):([a-zA-Z0-9_\-\.]+)", "combos");
                 else if (scrapingType == "userpass") GetResult(response,
                     @"[a-z0-9_-]{3,16}:([a-zA-Z0-9_\-\.]+)", "combos");
                 else if (scrapingType == "proxies") GetResult(response,
                     @"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=[^\d])\s*:?\s*(\d{2,5})", "proxies");
                 else if (scrapingType == "emailonly") GetResult(response,
-                    @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})", "emails");
+                    @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})", "emails");
                 else if (scrapingType == "custom") GetResult(response, customRegex, "result");
             }
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                log(error, 2);
-                //error.ColorWriteLine(ConsoleUtils.BadColor);
+                ConsoleUtils.Log(error, 2);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) error.ColorWriteLine(ConsoleUtils.BadColor);
+                if (showErrors) ConsoleUtils.Log(error, 2);
 
                 errors++;
                 if (retries > 0)
@@ -358,15 +358,13 @@ namespace B3RAP_Leecher_v3
                         fileagain: try
                         {
                             File.AppendAllLines(path, result);
-                            string scrapeResult = $"Scraped {result.Count - 1} {type}";
-                            log(scrapeResult, 1);
+                            ConsoleUtils.Log($"Scraped {result.Count - 1} {type}", 1);
                         }
                         catch
                         {
-                            string error = $"Unable to write to file {path}. Retrying in 3 seconds...";
-                            log(error, 2);
-                            Thread.Sleep(writeErrorWaitTime * 1000);
-                            goto fileagain; 
+                            ConsoleUtils.Log($"Unable to write to file {path}. Retrying in 3 seconds...", 2);
+                            Thread.Sleep(writeErrorWaitTime);
+                            goto fileagain;
                         }
                     }
                 }
@@ -374,10 +372,9 @@ namespace B3RAP_Leecher_v3
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                log(error, 2);
-                //error.ColorWriteLine(ConsoleUtils.BadColor);
+                ConsoleUtils.Log(error, 2);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) error.ColorWriteLine(ConsoleUtils.BadColor);
+                if (showErrors) ConsoleUtils.Log(error, 2);
 
                 errors++;
                 if (retries > 0)
@@ -386,25 +383,6 @@ namespace B3RAP_Leecher_v3
                         retry++;
                         goto again;
                     }
-            }
-        }
-
-        public static void log(string message, int type)
-        {
-            if(type == 0)
-            {
-                message = message.Insert(0, "[*] ");
-                message.ColorWriteLine(ConsoleUtils.InfoColor);
-            }
-            else if(type == 1)
-            {
-                message = message.Insert(0, "[+] ");
-                message.ColorWriteLine(ConsoleUtils.GoodColor);
-            }
-            else
-            {
-                message = message.Insert(0, "[-] ");
-                message.ColorWriteLine(ConsoleUtils.BadColor);
             }
         }
     }
