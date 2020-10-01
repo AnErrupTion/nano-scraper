@@ -17,7 +17,7 @@ namespace B3RAP_Leecher_v3
         private static string[] engines, websites, keywords;
 
         // Version of the scraper
-        public static readonly string Version = "3.0";
+        public static readonly string Version = "1.0";
 
         // Useful global variables for this class
         public static string engine, website, keyword;
