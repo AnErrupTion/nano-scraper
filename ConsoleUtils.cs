@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace B3RAP_Leecher_v3
 {
@@ -6,9 +6,9 @@ namespace B3RAP_Leecher_v3
     {
         public static ConsoleColor BadColor = ConsoleColor.Red;
 
-        public static void UpdateConsoleTitle(this string str)
+        public static void UpdateConsoleTitle()
         {
-            Console.Title = $"nαnσ scɾαρҽɾ v{Program.Version} | {str} " +
+            Console.Title = $"nαnσ scɾαρҽɾ v{Program.Version} " +
                 $"| Engine : {Program.engine} " +
                 $"| Website : {Program.website} " +
                 $"| Keyword : {Program.keyword} " +
