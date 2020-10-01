@@ -230,7 +230,11 @@ namespace B3RAP_Leecher_v3
                     ReadWriteTimeout = timeout,
                     AllowAutoRedirect = true,
                     MaximumAutomaticRedirections = 10,
-                    Proxy = RandomProxy()
+                    Proxy = RandomProxy(),
+                    Reconnect = false,
+                    KeepAlive = true,
+                    KeepAliveTimeout = 7500,
+                    MaximumKeepAliveRequests = 40
                 };
 
                 if (retries > 0)
@@ -276,6 +280,37 @@ namespace B3RAP_Leecher_v3
         {
             again: try
             {
+                if (req == null)
+                {
+                    req = new HttpRequest()
+                    {
+                        UserAgent = Http.ChromeUserAgent(),
+                        EnableEncodingContent = false,
+                        IgnoreInvalidCookie = true,
+                        IgnoreProtocolErrors = true,
+                        UseCookies = false,
+                        ConnectTimeout = timeout,
+                        ReadWriteTimeout = timeout,
+                        AllowAutoRedirect = true,
+                        MaximumAutomaticRedirections = 10,
+                        Proxy = RandomProxy(),
+                        Reconnect = false,
+                        KeepAlive = true,
+                        KeepAliveTimeout = 7500,
+                        MaximumKeepAliveRequests = 40
+                    };
+
+                    if (retries > 0)
+                    {
+                        req.Reconnect = true;
+                        req.ReconnectDelay = timeout;
+                        req.ReconnectLimit = retries;
+                    }
+
+                    req.SslCertificateValidatorCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+                    req.AddHeader("Accept", "*/*");
+                }
+
                 foreach (string link in links)
                 {
                     string response = req.Get(link).ToString();
