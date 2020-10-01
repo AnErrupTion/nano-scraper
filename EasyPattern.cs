@@ -26,7 +26,7 @@
 
         public static string GetCorrectToken(string token)
         {
-            return $"[{token}]";
+            return $"[{token}";
         }
 
         public static bool IsToken(string str)
