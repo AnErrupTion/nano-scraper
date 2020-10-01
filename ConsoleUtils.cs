@@ -4,7 +4,9 @@ namespace B3RAP_Leecher_v3
 {
     public static class ConsoleUtils
     {
+        public static ConsoleColor InfoColor = ConsoleColor.White;
         public static ConsoleColor BadColor = ConsoleColor.Red;
+        public static ConsoleColor GoodColor = ConsoleColor.Green;
 
         public static void UpdateConsoleTitle()
         {
