@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace B3RAP_Leecher_v3
@@ -13,13 +14,13 @@ namespace B3RAP_Leecher_v3
 
         public int Index { get; set; }
 
-        private string[] configuration = new string[] { };
+        private IEnumerable<string> configuration;
 
         public string CommentChar { get; set; }
 
         public string ParseString(string str)
         {
-            if (configuration.Length > 0)
+            if (configuration.Count() > 0)
                 foreach (string line in configuration)
                     if (!line.Contains(CommentChar) && line.Contains(str))
                     {
@@ -43,12 +44,12 @@ namespace B3RAP_Leecher_v3
             else return false;
         }
 
-        public string[] ParseStringArray(string str)
+        public IEnumerable<string> ParseStringArray(string str)
         {
             string file = ParseString(str);
             if (File.Exists(file))
             {
-                string[] array = File.ReadAllLines(file);
+                var array = File.ReadLines(file);
                 if (array.Any()) return array;
             }
             return null;
@@ -56,7 +57,7 @@ namespace B3RAP_Leecher_v3
 
         public void ReadFile()
         {
-            configuration = File.ReadAllLines(Config);
+            configuration = File.ReadLines(Config);
         }
     }
 }
