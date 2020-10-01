@@ -5,12 +5,9 @@ namespace B3RAP_Leecher_v3
 {
     public static class Arrays
     {
-        public static string[] FastRemoveDupes(this IEnumerable<string> array)
+        public static HashSet<string> FastRemoveDupes(this IEnumerable<string> array)
         {
-            HashSet<string> set = new HashSet<string>(array);
-            string[] arr = new string[set.Count];
-            set.CopyTo(arr);
-            return arr;
+            return new HashSet<string>(array);
         }
 
         public static IEnumerable<string> Clean(this IEnumerable<string> array)
