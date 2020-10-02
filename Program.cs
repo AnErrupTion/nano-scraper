@@ -60,7 +60,7 @@ namespace B3RAP_Leecher_v3
             else
             {
                 string error = $"The proxy {proxy} is bad, trying a new one...";
-                ConsoleUtils.Log(error, 2);
+                Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 goto again;
             }
@@ -81,7 +81,7 @@ namespace B3RAP_Leecher_v3
             catch
             {
                 string error = "Could not read important files, exiting.";
-                ConsoleUtils.Log(error, 2);
+                Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 Thread.Sleep(2000);
                 Environment.Exit(1);
@@ -105,7 +105,8 @@ namespace B3RAP_Leecher_v3
                 else
                 {
                     pattern = EasyPattern.Parse(pattern);
-                    ConsoleUtils.Log("Please note that Easy Pattern doesn't work yet, so please don't use it.", 0);
+                    Utils.Log("Please note that Easy Pattern doesn't work yet, " +
+                        "so please don't use it.", LogType.Info);
                 }
                 retries = config.ParseInteger("retries");
                 timeout = config.ParseInteger("timeout") * 1000;
@@ -122,7 +123,7 @@ namespace B3RAP_Leecher_v3
             catch
             {
                 string error = "Failed to parse settings, exiting.";
-                ConsoleUtils.Log(error, 2);
+                Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 Thread.Sleep(2000);
                 Environment.Exit(1);
@@ -136,15 +137,15 @@ namespace B3RAP_Leecher_v3
                 "B3RAP ProxyScrap (private) was the first program developed under the name B3RAP Softwares.",
                 "AnErrupTion, the creator of nαnσ sσftɯαɾҽs, loves privacy so much he has an XMPP account! (anerruption@disroot.org)",
                 "This is just the beginning...",
-                "Handmade since it was handmade :)",
-                "Hail Stackoverflow!",
-                "Slayer Leecher's only real competitor",
-                "Simplicity within."
+                "This was made by a human's hands!",
+                "StackOverflow did help for the development of this!",
+                "SLAYER Leecher is the only real competitor.",
+                "Simplicity is built-in into the program."
             };
 
             if (args.Length == 0 || args[0] != "--notips")
             {
-                ConsoleUtils.Log($"Did you know?\n{facts[rand.Next(facts.Length)]}", 0);
+                Utils.Log($"Did you know?\n{facts[rand.Next(facts.Length)]}", LogType.Info);
                 Thread.Sleep(3000);
             }
 
@@ -172,9 +173,9 @@ namespace B3RAP_Leecher_v3
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                ConsoleUtils.Log(error, 2);
+                Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) ConsoleUtils.Log(error, 2);
+                if (showErrors) Utils.Log(error, LogType.Error);
 
                 errors++;
                 if (retries > 0)
@@ -201,11 +202,11 @@ namespace B3RAP_Leecher_v3
 
             again: try
             {
-                ConsoleUtils.UpdateConsoleTitle();
+                Utils.UpdateConsoleTitle();
 
                 if (removeDupes && File.Exists(path))
                 {
-                    ConsoleUtils.Log("Removing duplicates...", 0);
+                    Utils.Log("Removing duplicates...", LogType.Info);
                     var lines = File.ReadLines(path).Clean();
                     File.WriteAllLines(path, lines);
 
@@ -213,58 +214,31 @@ namespace B3RAP_Leecher_v3
                     if (wait2Seconds)
                     {
                         text += " Waiting 2 seconds before continuing...";
-                        ConsoleUtils.Log(text, 1);
+                        Utils.Log(text, LogType.Success);
                         Thread.Sleep(2000);
                     }
-                    else ConsoleUtils.Log(text, 1);
+                    else Utils.Log(text, LogType.Success);
                 }
 
-                using HttpRequest req = new HttpRequest
-                {
-                    UserAgent = Http.ChromeUserAgent(),
-                    EnableEncodingContent = false,
-                    IgnoreInvalidCookie = true,
-                    IgnoreProtocolErrors = true,
-                    UseCookies = false,
-                    ConnectTimeout = timeout,
-                    ReadWriteTimeout = timeout,
-                    AllowAutoRedirect = true,
-                    MaximumAutomaticRedirections = 10,
-                    Proxy = RandomProxy(),
-                    Reconnect = false,
-                    KeepAlive = true,
-                    KeepAliveTimeout = 7500,
-                    MaximumKeepAliveRequests = 40
-                };
+                using var req = Utils.CreateRequest(timeout, retries, RandomProxy());
+                Utils.Log("Scraping links...", LogType.Info);
 
-                if (retries > 0)
-                {
-                    req.Reconnect = true;
-                    req.ReconnectDelay = timeout;
-                    req.ReconnectLimit = retries;
-                }
-
-                req.SslCertificateValidatorCallback += (sender, certificate, chain, sslPolicyErrors) => true;
-                req.AddHeader("Accept", "*/*");
-
-                ConsoleUtils.Log("Scraping links...", 0);
-
-                var response = req.Get($"{engine}{keyword}+site:{website}").ToString();
+                var response = req.Get($"{engine}{keyword}+site:{website}").GetString();
                 var regex = Regex.Matches(response, $@"(https:\/\/{website}\/\w+)");
 
                 if (regex.Count > 0)
                 {
                     var links = regex.OfType<Match>().Select(m => m.Value).FastRemoveDupes();
-                    ConsoleUtils.Log($"Got {links.Count()} links, scraping result...", 0);
+                    Utils.Log($"Got {links.Count()} links, scraping result...", LogType.Info);
                     ScrapeResult(links, req);
                 }
             }
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                ConsoleUtils.Log(error, 2);
+                Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) ConsoleUtils.Log(error, 2);
+                if (showErrors) Utils.Log(error, LogType.Error);
 
                 errors++;
                 if (retries > 0)
@@ -280,62 +254,39 @@ namespace B3RAP_Leecher_v3
         {
             again: try
             {
-                if (req == null)
+                if (req == null) req = Utils.CreateRequest(timeout, retries, RandomProxy());
+                foreach (var link in links)
                 {
-                    req = new HttpRequest()
-                    {
-                        UserAgent = Http.ChromeUserAgent(),
-                        EnableEncodingContent = false,
-                        IgnoreInvalidCookie = true,
-                        IgnoreProtocolErrors = true,
-                        UseCookies = false,
-                        ConnectTimeout = timeout,
-                        ReadWriteTimeout = timeout,
-                        AllowAutoRedirect = true,
-                        MaximumAutomaticRedirections = 10,
-                        Proxy = RandomProxy(),
-                        Reconnect = false,
-                        KeepAlive = true,
-                        KeepAliveTimeout = 7500,
-                        MaximumKeepAliveRequests = 40
-                    };
-
-                    if (retries > 0)
-                    {
-                        req.Reconnect = true;
-                        req.ReconnectDelay = timeout;
-                        req.ReconnectLimit = retries;
-                    }
-
-                    req.SslCertificateValidatorCallback += (sender, certificate, chain, sslPolicyErrors) => true;
-                    req.AddHeader("Accept", "*/*");
-                }
-
-                foreach (string link in links)
-                {
-                    string response = req.Get(link).ToString();
+                    var response = req.Get(link).GetString();
                     if (link.Contains("anonfiles.com"))
                     {
-                        MatchCollection regex = Regex.Matches(response, @"(https:\/\/.*.anonfiles.com\/.*)");
+                        var regex = Regex.Matches(response, @"(https:\/\/.*.anonfiles.com\/.*)");
                         if (regex.Count > 0)
                         {
                             var result = regex.OfType<Match>().Select(m => m.Value).ToList();
                             if (!string.IsNullOrEmpty(result.Last()))
                             {
                                 result.Add(string.Empty);
-                                foreach (string res in result.Clean()) AppendResult(req.Get(res.Replace(">                    <img", string.Empty).Replace("\"", string.Empty)).ToString());
+                                foreach (var res in result.Clean())
+                                {
+                                    var resp = req.Get(res.Replace(
+                                        ">                    <img", string.Empty)
+                                        .Replace("\"", string.Empty)).GetString();
+                                    AppendResult(resp, link);
+                                }
                             }
                         }
                     }
-                    else AppendResult(response);
+                    else AppendResult(response, link);
                 }
+                req.Dispose();
             }
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                ConsoleUtils.Log(error, 2);
+                Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) ConsoleUtils.Log(error, 2);
+                if (showErrors) Utils.Log(error, LogType.Error);
 
                 errors++;
                 if (retries > 0)
@@ -347,26 +298,30 @@ namespace B3RAP_Leecher_v3
             }
         }
 
-        private static void AppendResult(string response)
+        private static void AppendResult(string response, string link)
         {
             again: try
             {
-                if (scrapingType == "emailpass") GetResult(response,
-                @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6}):([a-zA-Z0-9_\-\.]+)", "combos");
+                if (scrapingType == "emailpass")
+                {
+                    GetResult(response,
+                @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6}):([a-zA-Z0-9_\-\.]+)",
+                "combos", link);
+                }
                 else if (scrapingType == "userpass") GetResult(response,
-                    @"[a-z0-9_-]{3,16}:([a-zA-Z0-9_\-\.]+)", "combos");
+                    @"[a-z0-9_-]{3,16}:([a-zA-Z0-9_\-\.]+)", "combos", link);
                 else if (scrapingType == "proxies") GetResult(response,
-                    @"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=[^\d])\s*:?\s*(\d{2,5})", "proxies");
+                    @"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=[^\d])\s*:?\s*(\d{2,5})", "proxies", link);
                 else if (scrapingType == "emailonly") GetResult(response,
-                    @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})", "emails");
-                else if (scrapingType == "custom") GetResult(response, customRegex, "result");
+                    @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})", "emails", link);
+                else if (scrapingType == "custom") GetResult(response, customRegex, "result", link);
             }
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                ConsoleUtils.Log(error, 2);
+                Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) ConsoleUtils.Log(error, 2);
+                if (showErrors) Utils.Log(error, LogType.Error);
 
                 errors++;
                 if (retries > 0)
@@ -378,7 +333,7 @@ namespace B3RAP_Leecher_v3
             }
         }
 
-        private static void GetResult(string response, string regexx, string type)
+        private static void GetResult(string response, string regexx, string type, string link)
         {
             again: try
             {
@@ -393,11 +348,11 @@ namespace B3RAP_Leecher_v3
                         fileagain: try
                         {
                             File.AppendAllLines(path, result);
-                            ConsoleUtils.Log($"Scraped {result.Count - 1} {type}", 1);
+                            Utils.Log($"Scraped {result.Count - 1} {type} - {link}", LogType.Success);
                         }
                         catch
                         {
-                            ConsoleUtils.Log($"Unable to write to file {path}. Retrying in 3 seconds...", 2);
+                            Utils.Log($"Unable to write to file {path}. Retrying in 3 seconds...", LogType.Error);
                             Thread.Sleep(writeErrorWaitTime);
                             goto fileagain;
                         }
@@ -407,9 +362,9 @@ namespace B3RAP_Leecher_v3
             catch (Exception ex)
             {
                 string error = $"{ex.Message}";
-                ConsoleUtils.Log(error, 2);
+                Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) ConsoleUtils.Log(error, 2);
+                if (showErrors) Utils.Log(error, LogType.Error);
 
                 errors++;
                 if (retries > 0)
