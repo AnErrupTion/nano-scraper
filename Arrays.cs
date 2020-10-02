@@ -12,7 +12,12 @@ namespace B3RAP_Leecher_v3
 
         public static IEnumerable<string> Clean(this IEnumerable<string> array)
         {
-            return array.FastRemoveDupes().Where(x => x.Length > 5);
+            return array.FastRemoveDupes().Where(x
+                => x.Length > 5
+                && !x.EndsWith("...")
+                && !x.EndsWith("..")
+                && !x.EndsWith(".")
+            );
         }
     }
 }
