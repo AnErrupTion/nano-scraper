@@ -137,10 +137,12 @@ namespace B3RAP_Leecher_v3
                 "B3RAP ProxyScrap (private) was the first program developed under the name B3RAP Softwares.",
                 "AnErrupTion, the creator of nαnσ sσftɯαɾҽs, loves privacy so much he has an XMPP account! (anerruption@disroot.org)",
                 "This is just the beginning...",
-                "This was made by a human's hands!",
+                "This was made by human hands and feet (sometimes)!",
                 "StackOverflow did help for the development of this!",
-                "SLAYER Leecher is the only real competitor.",
-                "Simplicity is built-in into the program."
+                "This is better than Slayer Leecher ;)",
+                "Simplicity is built-in into the program.",
+                "The cake is a lie.",
+                "The universe is inside a micro-organism living on another kind of creature."
             };
 
             if (args.Length == 0 || args[0] != "--notips")
