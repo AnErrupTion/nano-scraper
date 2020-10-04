@@ -1,5 +1,6 @@
 using Leaf.xNet;
 using System;
+using System.Linq;
 
 namespace B3RAP_Leecher_v3
 {
@@ -34,12 +35,6 @@ namespace B3RAP_Leecher_v3
             Console.ForegroundColor = reset;
         }
 
-        public static string GetString(this HttpResponse response)
-        {
-            using var stream = response.ToMemoryStream();
-            return response.CharacterSet.GetString(stream.GetBuffer(), 0, (int)stream.Length);
-        }
-
         public static HttpRequest CreateRequest(int timeout, int retries, ProxyClient client)
         {
             HttpRequest req = new HttpRequest()
@@ -54,10 +49,7 @@ namespace B3RAP_Leecher_v3
                 AllowAutoRedirect = true,
                 MaximumAutomaticRedirections = 10,
                 Proxy = client,
-                Reconnect = false,
-                KeepAlive = true,
-                KeepAliveTimeout = 7500,
-                MaximumKeepAliveRequests = 40
+                Reconnect = false
             };
 
             if (retries > 0)
