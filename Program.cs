@@ -20,7 +20,7 @@ namespace B3RAP_Leecher_v3
 
         // Useful global variables for this class
         public static string engine, website, keyword;
-        public static int errors, retry, fileInt;
+        public static int errors, retry;
         public static string dateTimeFileName;
 
         // File parser used to parse the config
@@ -156,11 +156,9 @@ namespace B3RAP_Leecher_v3
             Console.Title = "Starting scraper...";
 
             dateTimeFileName = DateTime.Now.ToString("yyyy.dd.M HH.mm.ss");
-            fileInt = rand.Next();
-            //path = $"results/{scrapingType}-{fileInt}.txt";
             path = $"results/{scrapingType}-{dateTimeFileName}.txt";
 
-        again: try
+            again: try
             {
                 if (customLinks != null && customLinks.Count() > 0) ScrapeResult(customLinks, null);
                 else
