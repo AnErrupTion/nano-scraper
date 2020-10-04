@@ -223,7 +223,7 @@ namespace B3RAP_Leecher_v3
                 using var req = Utils.CreateRequest(timeout, retries, RandomProxy());
                 Utils.Log("Scraping links...", LogType.Info);
 
-                var response = req.Get($"{engine}{keyword}+site:{website}").GetString();
+                var response = req.Get($"{engine}{keyword}+site:{website}").ToString();
                 var regex = Regex.Matches(response, $@"(https:\/\/{website}\/\w+)");
 
                 if (regex.Count > 0)
@@ -257,23 +257,20 @@ namespace B3RAP_Leecher_v3
                 if (req == null) req = Utils.CreateRequest(timeout, retries, RandomProxy());
                 foreach (var link in links)
                 {
-                    var response = req.Get(link).GetString();
+                    var response = req.Get(link).ToString();
                     if (link.Contains("anonfiles.com"))
                     {
                         var regex = Regex.Matches(response, @"(https:\/\/.*.anonfiles.com\/.*)");
                         if (regex.Count > 0)
                         {
-                            var result = regex.OfType<Match>().Select(m => m.Value).ToList();
+                            var result = regex.OfType<Match>().Select(m => m.Value);
                             if (!string.IsNullOrEmpty(result.Last()))
                             {
-                                result.Add(string.Empty);
+                                result.Append(string.Empty);
                                 foreach (var res in result.Clean())
-                                {
-                                    var resp = req.Get(res.Replace(
+                                    AppendResult(req.Get(res.Replace(
                                         ">                    <img", string.Empty)
-                                        .Replace("\"", string.Empty)).GetString();
-                                    AppendResult(resp, link);
-                                }
+                                        .Replace("\"", string.Empty)).ToString(), link);
                             }
                         }
                     }
@@ -340,15 +337,15 @@ namespace B3RAP_Leecher_v3
                 MatchCollection regex = Regex.Matches(response, regexx);
                 if (regex.Count > 0)
                 {
-                    var result = regex.OfType<Match>().Select(m => m.Value).ToList();
+                    var result = regex.OfType<Match>().Select(m => m.Value);
                     if (!string.IsNullOrEmpty(result.Last()))
                     {
-                        result.Add(string.Empty);
+                        result.Append(string.Empty);
 
                         fileagain: try
                         {
                             File.AppendAllLines(path, result);
-                            Utils.Log($"Scraped {result.Count - 1} {type} - {link}", LogType.Success);
+                            Utils.Log($"Scraped {result.Count() - 1} {type} - {link}", LogType.Success);
                         }
                         catch
                         {
