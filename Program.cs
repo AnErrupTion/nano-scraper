@@ -21,6 +21,7 @@ namespace B3RAP_Leecher_v3
         // Useful global variables for this class
         public static string engine, website, keyword;
         public static int errors, retry, fileInt;
+        public static string dateTimeFileName;
 
         // File parser used to parse the config
         private static readonly FileParser config = new FileParser()
@@ -137,10 +138,12 @@ namespace B3RAP_Leecher_v3
                 "B3RAP ProxyScrap (private) was the first program developed under the name B3RAP Softwares.",
                 "AnErrupTion, the creator of nαnσ sσftɯαɾҽs, loves privacy so much he has an XMPP account! (anerruption@disroot.org)",
                 "This is just the beginning...",
-                "This was made by a human's hands!",
+                "This was made by human hands and feet (sometimes)!",
                 "StackOverflow did help for the development of this!",
-                "SLAYER Leecher is the only real competitor.",
-                "Simplicity is built-in into the program."
+                "This is better than Slayer Leecher ;)",
+                "Simplicity is built-in into the program.",
+                "The cake is a lie.",
+                "The universe is inside a micro-organism living on another kind of creature."
             };
 
             if (args.Length == 0 || args[0] != "--notips")
@@ -152,10 +155,12 @@ namespace B3RAP_Leecher_v3
             Console.Clear();
             Console.Title = "Starting scraper...";
 
+            dateTimeFileName = DateTime.Now.ToString("yyyy.dd.M HH.mm.ss");
             fileInt = rand.Next();
-            path = $"results/{scrapingType}-{fileInt}.txt";
+            //path = $"results/{scrapingType}-{fileInt}.txt";
+            path = $"results/{scrapingType}-{dateTimeFileName}.txt";
 
-            again: try
+        again: try
             {
                 if (customLinks != null && customLinks.Count() > 0) ScrapeResult(customLinks, null);
                 else
