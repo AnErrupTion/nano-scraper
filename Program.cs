@@ -7,6 +7,7 @@ using System.Data;
 using System.Threading;
 using System.Text;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace B3RAP_Leecher_v3
 {
@@ -20,7 +21,7 @@ namespace B3RAP_Leecher_v3
 
         // Useful global variables for this class
         public static string engine, website, keyword;
-        public static int errors, retry;
+        public static int errors, retry, linksScraped;
         public static string dateTimeFileName;
 
         // File parser used to parse the config
@@ -45,6 +46,7 @@ namespace B3RAP_Leecher_v3
         private static string path;
         private static readonly string logPath = "logs.txt";
 
+        // Gets a random proxy, retursn null if it can't get one or there are no proxies.
         private static ProxyClient RandomProxy()
         {
             again: if (proxies == null || proxies.Count() == 0) return null;
@@ -67,6 +69,7 @@ namespace B3RAP_Leecher_v3
             }
         }
 
+        // The main method
         static void Main(string[] args)
         {
             Console.Title = "Loading...";
@@ -91,23 +94,11 @@ namespace B3RAP_Leecher_v3
             try
             {
                 pattern = config.ParseString("pattern");
-                if (pattern.Contains("regex"))
-                {
-                    string[] array = pattern.Split('"');
-                    pattern = array[0];
-                    customRegex = array[1];
-                }
-                else if (pattern.Contains("preset"))
+                if (pattern.Contains("preset\""))
                 {
                     string[] array = pattern.Split('"');
                     pattern = array[0];
                     scrapingType = array[1];
-                }
-                else
-                {
-                    pattern = EasyPattern.Parse(pattern);
-                    Utils.Log("Please note that Easy Pattern doesn't work yet, " +
-                        "so please don't use it.", LogType.Info);
                 }
                 retries = config.ParseInteger("retries");
                 timeout = config.ParseInteger("timeout") * 1000;
@@ -162,6 +153,7 @@ namespace B3RAP_Leecher_v3
             {
                 if (customLinks != null && customLinks.Count() > 0) ScrapeResult(customLinks, null);
                 else
+                {
                     foreach (string engine in engines)
                         foreach (string website in websites)
                             foreach (string keyword in keywords)
@@ -172,6 +164,7 @@ namespace B3RAP_Leecher_v3
                                 retry = 1;
                                 Scrape();
                             }
+                }
             }
             catch (Exception ex)
             {
@@ -190,6 +183,7 @@ namespace B3RAP_Leecher_v3
             }
         }
 
+        // This is where everything starts (scraping links)
         private static void Scrape()
         {
             if (past24Hours)
@@ -207,7 +201,7 @@ namespace B3RAP_Leecher_v3
             {
                 Utils.UpdateConsoleTitle();
 
-                if (removeDupes && File.Exists(path))
+                if (removeDupes && File.Exists(path) && linksScraped > 0)
                 {
                     Utils.Log("Removing duplicates...", LogType.Info);
                     var lines = File.ReadLines(path).Clean();
@@ -227,11 +221,12 @@ namespace B3RAP_Leecher_v3
                 Utils.Log("Scraping links...", LogType.Info);
 
                 var response = req.Get($"{engine}{keyword}+site:{website}").ToString();
-                var regex = Regex.Matches(response, $@"(https:\/\/{website}\/\w+)");
+                var regex = Regex.Matches(response, $@"https:\/\/{website}\/\w+");
 
-                if (regex.Count > 0)
+                linksScraped = regex.Count;
+                if (linksScraped > 0)
                 {
-                    var links = regex.OfType<Match>().Select(m => m.Value).FastRemoveDupes();
+                    var links = regex.Select(m => m.Value).FastRemoveDupes();
                     Utils.Log($"Got {links.Count()} links, scraping result...", LogType.Info);
                     ScrapeResult(links, req);
                 }
@@ -253,6 +248,7 @@ namespace B3RAP_Leecher_v3
             }
         }
 
+        // Scrapes results from links
         private static void ScrapeResult(IEnumerable<string> links, HttpRequest req)
         {
             again: try
@@ -260,13 +256,13 @@ namespace B3RAP_Leecher_v3
                 if (req == null) req = Utils.CreateRequest(timeout, retries, RandomProxy());
                 foreach (var link in links)
                 {
-                    var response = req.Get(link).ToString();
+                    var response = req.Get(link).ToString().Replace("|", ":").Replace(" ", string.Empty);
                     if (link.Contains("anonfiles.com"))
                     {
-                        var regex = Regex.Matches(response, @"(https:\/\/.*.anonfiles.com\/.*)");
+                        var regex = Regex.Matches(response, @"https:\/\/.*.anonfiles.com\/.*");
                         if (regex.Count > 0)
                         {
-                            var result = regex.OfType<Match>().Select(m => m.Value);
+                            var result = regex.Select(m => m.Value);
                             if (!string.IsNullOrEmpty(result.Last()))
                             {
                                 result.Append(string.Empty);
@@ -298,6 +294,7 @@ namespace B3RAP_Leecher_v3
             }
         }
 
+        // Detects the scraping type and associates the specific regex to append the result
         private static void AppendResult(string response, string link)
         {
             again: try
@@ -333,6 +330,7 @@ namespace B3RAP_Leecher_v3
             }
         }
 
+        // Finally appends the result to a file.
         private static void GetResult(string response, string regexx, string type, string link)
         {
             again: try
@@ -340,7 +338,7 @@ namespace B3RAP_Leecher_v3
                 MatchCollection regex = Regex.Matches(response, regexx);
                 if (regex.Count > 0)
                 {
-                    var result = regex.OfType<Match>().Select(m => m.Value);
+                    var result = regex.Select(m => m.Value);
                     if (!string.IsNullOrEmpty(result.Last()))
                     {
                         result.Append(string.Empty);
@@ -348,7 +346,7 @@ namespace B3RAP_Leecher_v3
                         fileagain: try
                         {
                             File.AppendAllLines(path, result);
-                            Utils.Log($"Scraped {result.Count() - 1} {type} - {link}", LogType.Success);
+                            Utils.Log($"Scraped {result.Count()} {type} - {link}", LogType.Success);
                         }
                         catch
                         {
