@@ -38,17 +38,16 @@ namespace B3RAP_Leecher_v3
         {
             HttpRequest req = new HttpRequest()
             {
-                UserAgent = Http.ChromeUserAgent(),
-                EnableEncodingContent = false,
+                UserAgent = Http.RandomUserAgent(),
                 IgnoreInvalidCookie = true,
                 IgnoreProtocolErrors = true,
-                UseCookies = false,
                 ConnectTimeout = timeout,
-                ReadWriteTimeout = timeout,
                 AllowAutoRedirect = true,
                 MaximumAutomaticRedirections = 10,
                 Proxy = client,
-                Reconnect = false
+                Reconnect = false,
+                UseCookies = true,
+                Cookies = new CookieStorage()
             };
 
             if (retries > 0)
