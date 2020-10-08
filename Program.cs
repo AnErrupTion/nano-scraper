@@ -16,7 +16,7 @@ namespace B3RAP_Leecher_v3
         private static IEnumerable<string> engines, websites, keywords;
 
         // Version of the scraper
-        public static readonly string Version = "1.1";
+        public static readonly string Version = "1.2";
 
         // Useful global variables for this class
         public static string engine, website, keyword;
@@ -50,19 +50,19 @@ namespace B3RAP_Leecher_v3
         {
             again: if (proxies == null || proxies.Count() == 0) return null;
 
-            string proxy = proxies.ElementAt(rand.Next(proxies.Count()));
+            var proxy = proxies.ElementAt(rand.Next(proxies.Count()));
 
             ProxyType type = ProxyType.HTTP;
             if (proxyType == "http") type = ProxyType.HTTP;
             else if (proxyType == "socks4") type = ProxyType.Socks4;
             else if (proxyType == "socks5") type = ProxyType.Socks5;
 
-            bool result = ProxyClient.TryParse(type, proxy, out ProxyClient client);
+            var result = ProxyClient.TryParse(type, proxy, out ProxyClient client);
             if (result) return client;
             else
             {
-                string error = $"The proxy {proxy} is bad, trying a new one...";
-                Utils.Log(error, LogType.Error);
+                var error = $"The proxy {proxy} is bad, trying a new one.";
+                if (showErrors) Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 goto again;
             }
@@ -83,8 +83,8 @@ namespace B3RAP_Leecher_v3
             }
             catch
             {
-                string error = "Could not read important files, exiting.";
-                Utils.Log(error, LogType.Error);
+                var error = "Could not read important files, exiting.";
+                if (showErrors) Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 Thread.Sleep(2000);
                 Environment.Exit(1);
@@ -97,7 +97,7 @@ namespace B3RAP_Leecher_v3
 
                 if (pattern.Contains("preset\""))
                 {
-                    string[] array = pattern.Split('"');
+                    var array = pattern.Split('"');
                     pattern = array[0];
                     scrapingType = array[1];
                 }
@@ -116,14 +116,14 @@ namespace B3RAP_Leecher_v3
             }
             catch
             {
-                string error = "Failed to parse settings, exiting.";
-                Utils.Log(error, LogType.Error);
+                var error = "Failed to parse settings, exiting.";
+                if (showErrors) Utils.Log(error, LogType.Error);
                 if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
                 Thread.Sleep(2000);
                 Environment.Exit(1);
             }
 
-            string[] facts = new string[]
+            var facts = new string[]
             {
                 "Results auto-save, so you can close the window at any moment and still have your result!",
                 "You can have multiple settings file. :O",
@@ -146,7 +146,7 @@ namespace B3RAP_Leecher_v3
             }
 
             Console.Clear();
-            Console.Title = "Starting scraper...";
+            Console.Title = "Starting scraper.";
 
             dateTimeFileName = DateTime.Now.ToString("yyyy.dd.M-HH.mm.ss");
             path = $"results/{scrapingType}-{dateTimeFileName}.txt";
@@ -156,27 +156,34 @@ namespace B3RAP_Leecher_v3
                 if (customLinks != null && customLinks.Count() > 0) ScrapeResult(customLinks, null);
                 else
                 {
-                    foreach (string engine in engines)
-                        foreach (string website in websites)
-                            foreach (string keyword in keywords)
+                    for (int i = 0; i < engines.Count(); i++)
+                    {
+                        var engine = engines.ElementAt(i);
+                        for (int j = 0; j < websites.Count(); j++)
+                        {
+                            var website = websites.ElementAt(j);
+                            for (int k = 0; k < keywords.Count(); k++)
                             {
+                                var keyword = keywords.ElementAt(k);
                                 Program.engine = engine;
                                 Program.website = website;
                                 Program.keyword = keyword;
                                 retry = 1;
                                 Scrape();
                             }
+                        }
+                    }
 
                     if (removeDupes && File.Exists(path) && linksScraped > 0)
                     {
-                        Utils.Log("Removing duplicates...", LogType.Info);
+                        Utils.Log("Removing duplicates.", LogType.Info);
                         var lines = File.ReadLines(path).Clean();
                         File.WriteAllLines(path, lines);
 
-                        string text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
+                        var text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
                         if (wait2Seconds)
                         {
-                            text += " Waiting 2 seconds before continuing...";
+                            text += " Waiting 2 seconds before continuing.";
                             Utils.Log(text, LogType.Success);
                             Thread.Sleep(2000);
                         }
@@ -186,10 +193,8 @@ namespace B3RAP_Leecher_v3
             }
             catch (Exception ex)
             {
-                string error = $"{ex.Message}";
-                Utils.Log(error, LogType.Error);
-                if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) Utils.Log(error, LogType.Error);
+                if (logErrors) File.AppendAllText(logPath, ex.Message + Environment.NewLine);
+                if (showErrors) Utils.Log(ex.Message, LogType.Error);
 
                 errors++;
                 if (retries > 0)
@@ -221,14 +226,14 @@ namespace B3RAP_Leecher_v3
 
                 if (removeDupes && File.Exists(path) && linksScraped > 0)
                 {
-                    Utils.Log("Removing duplicates...", LogType.Info);
+                    Utils.Log("Removing duplicates.", LogType.Info);
                     var lines = File.ReadLines(path).Clean();
                     File.WriteAllLines(path, lines);
 
-                    string text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
+                    var text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
                     if (wait2Seconds)
                     {
-                        text += " Waiting 2 seconds before continuing...";
+                        text += " Waiting 2 seconds before continuing.";
                         Utils.Log(text, LogType.Success);
                         Thread.Sleep(2000);
                     }
@@ -236,25 +241,23 @@ namespace B3RAP_Leecher_v3
                 }
 
                 using var req = Utils.CreateRequest(timeout, retries, RandomProxy());
-                Utils.Log("Scraping links...", LogType.Info);
 
                 var response = req.Get($"{engine}{keyword}+site:{website}").ToString();
-                var regex = Regex.Matches(response, $@"https:\/\/{website}\/\w+");
+                var matches = Regex.Matches(response, $@"https:\/\/{website}\/\w+");
 
-                linksScraped = regex.Count;
+                linksScraped = matches.Count;
                 if (linksScraped > 0)
                 {
-                    var links = regex.Select(m => m.Value).FastRemoveDupes();
-                    Utils.Log($"Got {links.Count()} links, scraping result...", LogType.Info);
+                    var links = matches.Select(m => m.Value).FastRemoveDupes();
+                    Utils.Log($"Got {links.Count()} links, scraping result.", LogType.Info);
                     ScrapeResult(links, req);
                 }
+                else Utils.Log("Could not get any links.", LogType.Error);
             }
             catch (Exception ex)
             {
-                string error = $"{ex.Message}";
-                Utils.Log(error, LogType.Error);
-                if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) Utils.Log(error, LogType.Error);
+                if (logErrors) File.AppendAllText(logPath, ex.Message + Environment.NewLine);
+                if (showErrors) Utils.Log(ex.Message, LogType.Error);
 
                 errors++;
                 if (retries > 0)
@@ -272,15 +275,18 @@ namespace B3RAP_Leecher_v3
             again: try
             {
                 if (req == null) req = Utils.CreateRequest(timeout, retries, RandomProxy());
-                foreach (var link in links)
+                for (int i = 0; i < links.Count(); i++)
                 {
-                    var response = req.Get(link).ToString().Replace("|", ":").Replace(" ", string.Empty);
+                    var link = links.ElementAt(i);
+                    var response = req.Get(link).ToString().Replace("|", ":");
+                    if (!response.Contains(":")) response = response.Replace(" ", ":");
+
                     if (link.Contains("anonfiles.com"))
                     {
-                        var regex = Regex.Matches(response, @"https:\/\/.*.anonfiles.com\/.*");
-                        if (regex.Count > 0)
+                        var matches = Regex.Matches(response, @"https:\/\/.*.anonfiles.com\/.*");
+                        if (matches.Count > 0)
                         {
-                            var result = regex.Select(m => m.Value);
+                            var result = matches.Select(m => m.Value);
                             if (!string.IsNullOrEmpty(result.Last()))
                             {
                                 result.Append(string.Empty);
@@ -293,14 +299,11 @@ namespace B3RAP_Leecher_v3
                     }
                     else AppendResult(response, link);
                 }
-                req.Dispose();
             }
             catch (Exception ex)
             {
-                string error = $"{ex.Message}";
-                Utils.Log(error, LogType.Error);
-                if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) Utils.Log(error, LogType.Error);
+                if (logErrors) File.AppendAllText(logPath, ex.Message + Environment.NewLine);
+                if (showErrors) Utils.Log(ex.Message, LogType.Error);
 
                 errors++;
                 if (retries > 0)
@@ -331,10 +334,8 @@ namespace B3RAP_Leecher_v3
             }
             catch (Exception ex)
             {
-                string error = $"{ex.Message}";
-                Utils.Log(error, LogType.Error);
-                if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) Utils.Log(error, LogType.Error);
+                if (logErrors) File.AppendAllText(logPath, ex.Message + Environment.NewLine);
+                if (showErrors) Utils.Log(ex.Message, LogType.Error);
 
                 errors++;
                 if (retries > 0)
@@ -347,14 +348,14 @@ namespace B3RAP_Leecher_v3
         }
 
         // Finally appends the result to a file.
-        private static void GetResult(string response, string regexx, string type, string link)
+        private static void GetResult(string response, string regex, string type, string link)
         {
             again: try
             {
-                MatchCollection regex = Regex.Matches(response, regexx);
-                if (regex.Count > 0)
+                var matches = Regex.Matches(response, regex);
+                if (matches.Count > 0)
                 {
-                    var result = regex.Select(m => m.Value);
+                    var result = matches.Select(m => m.Value);
                     if (!string.IsNullOrEmpty(result.Last()))
                     {
                         result.Append(string.Empty);
@@ -362,7 +363,7 @@ namespace B3RAP_Leecher_v3
                         fileagain: try
                         {
                             File.AppendAllLines(path, result);
-                            Utils.Log($"Scraped {result.Count()} {type} - {link}", LogType.Success);
+                            Utils.Log($"Scraped {result.Count()} {type}. - {link}", LogType.Success);
                         }
                         catch
                         {
@@ -372,13 +373,12 @@ namespace B3RAP_Leecher_v3
                         }
                     }
                 }
+                else Utils.Log($"Could not get any {type}. - {link}", LogType.Error);
             }
             catch (Exception ex)
             {
-                string error = $"{ex.Message}";
-                Utils.Log(error, LogType.Error);
-                if (logErrors) File.AppendAllText(logPath, error + Environment.NewLine);
-                if (showErrors) Utils.Log(error, LogType.Error);
+                if (logErrors) File.AppendAllText(logPath, ex.Message + Environment.NewLine);
+                if (showErrors) Utils.Log(ex.Message, LogType.Error);
 
                 errors++;
                 if (retries > 0)
