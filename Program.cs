@@ -7,7 +7,6 @@ using System.Data;
 using System.Threading;
 using System.Text;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace B3RAP_Leecher_v3
 {
@@ -28,7 +27,7 @@ namespace B3RAP_Leecher_v3
         private static readonly FileParser config = new FileParser()
         {
             Config = "settings/settings.txt",
-            Separator = ':',
+            Separator = '=',
             Index = 1,
             RemoveSpaces = true,
             CommentChar = "#"
@@ -38,7 +37,7 @@ namespace B3RAP_Leecher_v3
         private static readonly Random rand = new Random();
 
         // Settings
-        private static string pattern, scrapingType, customRegex, proxyType;
+        private static string pattern, scrapingType, proxyType;
         private static int retries, timeout, writeErrorWaitTime;
         private static IEnumerable<string> proxies, customLinks;
         private static bool past24Hours, showErrors, logErrors, removeDupes, wait2Seconds;
@@ -94,12 +93,15 @@ namespace B3RAP_Leecher_v3
             try
             {
                 pattern = config.ParseString("pattern");
+                scrapingType = "custom";
+
                 if (pattern.Contains("preset\""))
                 {
                     string[] array = pattern.Split('"');
                     pattern = array[0];
                     scrapingType = array[1];
                 }
+
                 retries = config.ParseInteger("retries");
                 timeout = config.ParseInteger("timeout") * 1000;
                 proxies = config.ParseStringArray("proxy_file");
@@ -146,7 +148,7 @@ namespace B3RAP_Leecher_v3
             Console.Clear();
             Console.Title = "Starting scraper...";
 
-            dateTimeFileName = DateTime.Now.ToString("yyyy.dd.M HH.mm.ss");
+            dateTimeFileName = DateTime.Now.ToString("yyyy.dd.M-HH.mm.ss");
             path = $"results/{scrapingType}-{dateTimeFileName}.txt";
 
             again: try
@@ -164,6 +166,22 @@ namespace B3RAP_Leecher_v3
                                 retry = 1;
                                 Scrape();
                             }
+
+                    if (removeDupes && File.Exists(path) && linksScraped > 0)
+                    {
+                        Utils.Log("Removing duplicates...", LogType.Info);
+                        var lines = File.ReadLines(path).Clean();
+                        File.WriteAllLines(path, lines);
+
+                        string text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
+                        if (wait2Seconds)
+                        {
+                            text += " Waiting 2 seconds before continuing...";
+                            Utils.Log(text, LogType.Success);
+                            Thread.Sleep(2000);
+                        }
+                        else Utils.Log(text, LogType.Success);
+                    }
                 }
             }
             catch (Exception ex)
@@ -300,18 +318,16 @@ namespace B3RAP_Leecher_v3
             again: try
             {
                 if (scrapingType == "emailpass")
-                {
                     GetResult(response,
                 @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6}):([a-zA-Z0-9_\-\.]+)",
                 "combos", link);
-                }
                 else if (scrapingType == "userpass") GetResult(response,
                     @"[a-z0-9_-]{3,16}:([a-zA-Z0-9_\-\.]+)", "combos", link);
                 else if (scrapingType == "proxies") GetResult(response,
                     @"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=[^\d])\s*:?\s*(\d{2,5})", "proxies", link);
                 else if (scrapingType == "emailonly") GetResult(response,
                     @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})", "emails", link);
-                else if (scrapingType == "custom") GetResult(response, customRegex, "result", link);
+                else if (scrapingType == "custom") GetResult(response, pattern, "result", link);
             }
             catch (Exception ex)
             {
