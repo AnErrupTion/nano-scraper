@@ -1,5 +1,7 @@
 using Leaf.xNet;
 using System;
+using System.IO;
+using System.Threading;
 
 namespace B3RAP_Leecher_v3
 {
@@ -32,6 +34,18 @@ namespace B3RAP_Leecher_v3
             Console.ForegroundColor = color;
             Console.WriteLine(msg);
             Console.ForegroundColor = reset;
+        }
+
+        public static void RemoveDupes(string path, bool wait2Seconds)
+        {
+            var lines = File.ReadLines(path).Clean();
+            File.WriteAllLines(path, lines);
+
+            var text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
+            if (wait2Seconds) text += " Waiting 2 seconds before continuing.";
+
+            Log(text, LogType.Info);
+            if (wait2Seconds) Thread.Sleep(2000);
         }
 
         public static HttpRequest CreateRequest(int timeout, int retries, ProxyClient client)
