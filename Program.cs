@@ -20,7 +20,7 @@ namespace B3RAP_Leecher_v3
 
         // Useful global variables for this class
         public static string engine, website, keyword;
-        public static int errors, retry, linksScraped;
+        public static int errors, retry, linksScraped, resultScraped;
         public static string dateTimeFileName;
 
         // File parser used to parse the config
@@ -131,9 +131,9 @@ namespace B3RAP_Leecher_v3
                 "B3RAP ProxyScrap (private) was the first program developed under the name B3RAP Softwares.",
                 "AnErrupTion, the creator of nαnσ sσftɯαɾҽs, loves privacy so much he has an XMPP account! (anerruption@disroot.org)",
                 "This is just the beginning...",
-                "This was made by human hands and feet (sometimes)!",
+                "This was made by human hands and feet! (sometimes)",
                 "StackOverflow did help for the development of this!",
-                "This is better than Slayer Leecher ;)",
+                "This is better than Slayer Leecher! ;)",
                 "Simplicity is built-in into the program.",
                 "The cake is a lie.",
                 "The universe is inside a micro-organism living on another kind of creature."
@@ -153,42 +153,45 @@ namespace B3RAP_Leecher_v3
 
             again: try
             {
-                if (customLinks != null && customLinks.Count() > 0) ScrapeResult(customLinks, null);
+                if (customLinks != null && customLinks.Count() > 0)
+                    ScrapeResult(customLinks, null);
+
                 else
                 {
                     for (int i = 0; i < engines.Count(); i++)
                     {
                         var engine = engines.ElementAt(i);
+                        if (past24Hours)
+                        {
+                            if (engine.Contains("bing")) engine = "https://www.bing.com/search?filters=ex1%3a%22ez1%22&q=";
+                            else if (engine.Contains("yahoo")) engine = "https://search.yahoo.com/search?age=1d&btf=d&q=";
+                            else if (engine.Contains("yandex")) engine = "https://yandex.com/search/?within=77&text=";
+                            else if (engine.Contains("google")) engine = "https://www.google.com/search?tbs=qdr:d&q=";
+                            else if (engine.Contains("duckduckgo")) engine = "https://duckduckgo.com/?df=d&ia=web&q=";
+                            else if (engine.Contains("aol")) engine = "https://search.aol.com/aol/search?age=1d&btf=d&q=";
+                            else if (engine.Contains("rambler")) engine = "https://nova.rambler.ru/search?period=day&query=";
+                        }
+
+                        Program.engine = engine;
+
                         for (int j = 0; j < websites.Count(); j++)
                         {
                             var website = websites.ElementAt(j);
+                            Program.website = website;
+
                             for (int k = 0; k < keywords.Count(); k++)
                             {
                                 var keyword = keywords.ElementAt(k);
-                                Program.engine = engine;
-                                Program.website = website;
                                 Program.keyword = keyword;
+
                                 retry = 1;
                                 Scrape();
                             }
                         }
                     }
 
-                    if (removeDupes && File.Exists(path) && linksScraped > 0)
-                    {
-                        Utils.Log("Removing duplicates.", LogType.Info);
-                        var lines = File.ReadLines(path).Clean();
-                        File.WriteAllLines(path, lines);
-
-                        var text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
-                        if (wait2Seconds)
-                        {
-                            text += " Waiting 2 seconds before continuing.";
-                            Utils.Log(text, LogType.Success);
-                            Thread.Sleep(2000);
-                        }
-                        else Utils.Log(text, LogType.Success);
-                    }
+                    if (removeDupes && File.Exists(path) && linksScraped > 0 && resultScraped > 0)
+                        Utils.RemoveDupes(path, wait2Seconds);
                 }
             }
             catch (Exception ex)
@@ -209,47 +212,22 @@ namespace B3RAP_Leecher_v3
         // This is where everything starts (scraping links)
         private static void Scrape()
         {
-            if (past24Hours)
-            {
-                if (engine.Contains("bing")) engine = "https://www.bing.com/search?filters=ex1%3a%22ez1%22&q=";
-                else if (engine.Contains("yahoo")) engine = "https://search.yahoo.com/search?age=1d&btf=d&q=";
-                else if (engine.Contains("yandex")) engine = "https://yandex.com/search/?within=77&text=";
-                else if (engine.Contains("google")) engine = "https://www.google.com/search?tbs=qdr:d&q=";
-                else if (engine.Contains("duckduckgo")) engine = "https://duckduckgo.com/?df=d&ia=web&q=";
-                else if (engine.Contains("aol")) engine = "https://search.aol.com/aol/search?age=1d&btf=d&q=";
-                else if (engine.Contains("rambler")) engine = "https://nova.rambler.ru/search?period=day&query=";
-            }
-
             again: try
             {
                 Utils.UpdateConsoleTitle();
-
-                if (removeDupes && File.Exists(path) && linksScraped > 0)
-                {
-                    Utils.Log("Removing duplicates.", LogType.Info);
-                    var lines = File.ReadLines(path).Clean();
-                    File.WriteAllLines(path, lines);
-
-                    var text = $"Duplicates removed, you can safely close this window if you want to stop scraping now.";
-                    if (wait2Seconds)
-                    {
-                        text += " Waiting 2 seconds before continuing.";
-                        Utils.Log(text, LogType.Success);
-                        Thread.Sleep(2000);
-                    }
-                    else Utils.Log(text, LogType.Success);
-                }
 
                 using var req = Utils.CreateRequest(timeout, retries, RandomProxy());
 
                 var response = req.Get($"{engine}{keyword}+site:{website}").ToString();
                 var matches = Regex.Matches(response, $@"https:\/\/{website}\/\w+");
-
                 linksScraped = matches.Count;
+
                 if (linksScraped > 0)
                 {
                     var links = matches.Select(m => m.Value).FastRemoveDupes();
-                    Utils.Log($"Got {links.Count()} links, scraping result.", LogType.Info);
+                    var count = links.Count();
+
+                    Utils.Log($"Got {count} {(count == 1 ? "link" : "links")}, scraping result.", LogType.Info);
                     ScrapeResult(links, req);
                 }
                 else Utils.Log("Could not get any links.", LogType.Error);
@@ -274,7 +252,9 @@ namespace B3RAP_Leecher_v3
         {
             again: try
             {
-                if (req == null) req = Utils.CreateRequest(timeout, retries, RandomProxy());
+                if (req == null)
+                    req = Utils.CreateRequest(timeout, retries, RandomProxy());
+
                 for (int i = 0; i < links.Count(); i++)
                 {
                     var link = links.ElementAt(i);
@@ -290,10 +270,13 @@ namespace B3RAP_Leecher_v3
                             if (!string.IsNullOrEmpty(result.Last()))
                             {
                                 result.Append(string.Empty);
-                                foreach (var res in result.Clean())
-                                    AppendResult(req.Get(res.Replace(
-                                        ">                    <img", string.Empty)
-                                        .Replace("\"", string.Empty)).ToString(), link);
+                                result = result.Clean();
+
+                                for (int j = 0; j < result.Count(); j++)
+                                {
+                                    var res = result.ElementAt(j);
+                                    AppendResult(req.Get(res.Replace(">                    <img", string.Empty).Replace("\"", string.Empty)).ToString(), link);
+                                }
                             }
                         }
                     }
@@ -320,17 +303,25 @@ namespace B3RAP_Leecher_v3
         {
             again: try
             {
+                var regex = string.Empty;
+
                 if (scrapingType == "emailpass")
-                    GetResult(response,
-                @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6}):([a-zA-Z0-9_\-\.]+)",
-                "combos", link);
-                else if (scrapingType == "userpass") GetResult(response,
-                    @"[a-z0-9_-]{3,16}:([a-zA-Z0-9_\-\.]+)", "combos", link);
-                else if (scrapingType == "proxies") GetResult(response,
-                    @"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=[^\d])\s*:?\s*(\d{2,5})", "proxies", link);
-                else if (scrapingType == "emailonly") GetResult(response,
-                    @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})", "emails", link);
-                else if (scrapingType == "custom") GetResult(response, pattern, "result", link);
+                    regex = @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6}):([a-zA-Z0-9_\-\.]+)";
+
+                else if (scrapingType == "userpass")
+                    regex = @"[a-z0-9_-]{3,16}:([a-zA-Z0-9_\-\.]+)";
+
+                else if (scrapingType == "proxies")
+                    regex = @"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=[^\d])\s*:?\s*(\d{2,5})";
+
+                else if (scrapingType == "emailonly")
+                    regex = @"([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})";
+
+                else if (scrapingType == "custom")
+                    regex = pattern;
+
+                if (!string.IsNullOrEmpty(regex))
+                    GetResult(response, regex, link);
             }
             catch (Exception ex)
             {
@@ -348,12 +339,14 @@ namespace B3RAP_Leecher_v3
         }
 
         // Finally appends the result to a file.
-        private static void GetResult(string response, string regex, string type, string link)
+        private static void GetResult(string response, string regex, string link)
         {
             again: try
             {
                 var matches = Regex.Matches(response, regex);
-                if (matches.Count > 0)
+                resultScraped = matches.Count;
+
+                if (resultScraped > 0)
                 {
                     var result = matches.Select(m => m.Value);
                     if (!string.IsNullOrEmpty(result.Last()))
@@ -363,7 +356,7 @@ namespace B3RAP_Leecher_v3
                         fileagain: try
                         {
                             File.AppendAllLines(path, result);
-                            Utils.Log($"Scraped {result.Count()} {type}. - {link}", LogType.Success);
+                            Utils.Log($"Scraped {result.Count()} {scrapingType} result. - {link}", LogType.Success);
                         }
                         catch
                         {
@@ -373,7 +366,7 @@ namespace B3RAP_Leecher_v3
                         }
                     }
                 }
-                else Utils.Log($"Could not get any {type}. - {link}", LogType.Error);
+                else Utils.Log($"Could not get any {scrapingType} result. - {link}", LogType.Error);
             }
             catch (Exception ex)
             {
