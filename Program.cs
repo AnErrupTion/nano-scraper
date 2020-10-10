@@ -8,7 +8,7 @@ using System.Threading;
 using System.Text;
 using System.Collections.Generic;
 
-namespace B3RAP_Leecher_v3
+namespace Nano_Scraper
 {
     class Program
     {
@@ -40,7 +40,8 @@ namespace B3RAP_Leecher_v3
         private static string pattern, scrapingType, proxyType;
         private static int retries, timeout, writeErrorWaitTime;
         private static IEnumerable<string> proxies, customLinks;
-        private static bool past24Hours, showErrors, logErrors, removeDupes, wait2Seconds;
+        private static List<string> scrapedLinks = new List<string>();
+        private static bool past24Hours, showErrors, logErrors, removeDupes, wait2Seconds, showCouldNotGetAnyResult, showDuplicateLinkCannotScrape;
 
         private static string path;
         private static readonly string logPath = "logs.txt";
@@ -113,6 +114,8 @@ namespace B3RAP_Leecher_v3
                 writeErrorWaitTime = config.ParseInteger("write_error_wait_time") * 1000;
                 removeDupes = config.ParseBoolean("remove_duplicates");
                 wait2Seconds = config.ParseBoolean("wait_2_seconds_before_continue");
+                showCouldNotGetAnyResult = config.ParseBoolean("show_could_not_get_any_result");
+                showDuplicateLinkCannotScrape = config.ParseBoolean("show_duplicate_link_cannot_scrape");
             }
             catch
             {
@@ -127,9 +130,9 @@ namespace B3RAP_Leecher_v3
             {
                 "Results auto-save, so you can close the window at any moment and still have your result!",
                 "You can have multiple settings file. :O",
-                "nαnσ sσftɯαɾҽs was previously named B3RAP Softwares!",
+                "Nano Softwares was previously named B3RAP Softwares!",
                 "B3RAP ProxyScrap (private) was the first program developed under the name B3RAP Softwares.",
-                "AnErrupTion, the creator of nαnσ sσftɯαɾҽs, loves privacy so much he has an XMPP account! (anerruption@disroot.org)",
+                "AnErrupTion, the creator of Nano Softwares, loves privacy so much he has an XMPP account! (anerruption@disroot.org)",
                 "This is just the beginning...",
                 "This was made by human hands and feet! (sometimes)",
                 "StackOverflow did help for the development of this!",
@@ -216,6 +219,9 @@ namespace B3RAP_Leecher_v3
             {
                 Utils.UpdateConsoleTitle();
 
+                if (removeDupes && File.Exists(path) && linksScraped > 0 && resultScraped > 0)
+                    Utils.RemoveDupes(path, wait2Seconds);
+
                 using var req = Utils.CreateRequest(timeout, retries, RandomProxy());
 
                 var response = req.Get($"{engine}{keyword}+site:{website}").ToString();
@@ -230,7 +236,6 @@ namespace B3RAP_Leecher_v3
                     Utils.Log($"Got {count} {(count == 1 ? "link" : "links")}, scraping result.", LogType.Info);
                     ScrapeResult(links, req);
                 }
-                else Utils.Log("Could not get any links.", LogType.Error);
             }
             catch (Exception ex)
             {
@@ -258,29 +263,37 @@ namespace B3RAP_Leecher_v3
                 for (int i = 0; i < links.Count(); i++)
                 {
                     var link = links.ElementAt(i);
-                    var response = req.Get(link).ToString().Replace("|", ":");
-                    if (!response.Contains(":")) response = response.Replace(" ", ":");
-
-                    if (link.Contains("anonfiles.com"))
+                    if (!scrapedLinks.Contains(link))
                     {
-                        var matches = Regex.Matches(response, @"https:\/\/.*.anonfiles.com\/.*");
-                        if (matches.Count > 0)
-                        {
-                            var result = matches.Select(m => m.Value);
-                            if (!string.IsNullOrEmpty(result.Last()))
-                            {
-                                result.Append(string.Empty);
-                                result = result.Clean();
+                        var response = req.Get(link).ToString().Replace("|", ":");
+                        if (!response.Contains(":")) response = response.Replace(" ", ":");
 
-                                for (int j = 0; j < result.Count(); j++)
+                        if (link.Contains("anonfiles.com"))
+                        {
+                            var matches = Regex.Matches(response, @"https:\/\/.*.anonfiles.com\/.*");
+                            if (matches.Count > 0)
+                            {
+                                var result = matches.Select(m => m.Value);
+                                if (!string.IsNullOrEmpty(result.Last()))
                                 {
-                                    var res = result.ElementAt(j);
-                                    AppendResult(req.Get(res.Replace(">                    <img", string.Empty).Replace("\"", string.Empty)).ToString(), link);
+                                    result.Append(string.Empty);
+                                    result = result.Clean();
+
+                                    for (int j = 0; j < result.Count(); j++)
+                                    {
+                                        var res = result.ElementAt(j);
+                                        AppendResult(req.Get(res.Replace(">                    <img", string.Empty).Replace("\"", string.Empty)).ToString(), link);
+                                    }
                                 }
                             }
                         }
+                        else AppendResult(response, link);
                     }
-                    else AppendResult(response, link);
+                    else
+                    {
+                        if (showDuplicateLinkCannotScrape)
+                            Utils.Log("Link is duplicate, cannot scrape from it. - " + link, LogType.Warning);
+                    }
                 }
             }
             catch (Exception ex)
@@ -322,6 +335,7 @@ namespace B3RAP_Leecher_v3
 
                 if (!string.IsNullOrEmpty(regex))
                     GetResult(response, regex, link);
+                else Utils.Log("Error, regex error beep ;-; owo :v", LogType.Warning);
             }
             catch (Exception ex)
             {
@@ -356,6 +370,7 @@ namespace B3RAP_Leecher_v3
                         fileagain: try
                         {
                             File.AppendAllLines(path, result);
+                            scrapedLinks.Add(link);
                             Utils.Log($"Scraped {result.Count()} {scrapingType} result. - {link}", LogType.Success);
                         }
                         catch
@@ -366,7 +381,11 @@ namespace B3RAP_Leecher_v3
                         }
                     }
                 }
-                else Utils.Log($"Could not get any {scrapingType} result. - {link}", LogType.Error);
+                else
+                {
+                    if (showCouldNotGetAnyResult)
+                        Utils.Log($"Could not get any {scrapingType} result. - {link}", LogType.Error);
+                }
             }
             catch (Exception ex)
             {
