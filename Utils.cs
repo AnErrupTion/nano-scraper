@@ -3,13 +3,14 @@ using System;
 using System.IO;
 using System.Threading;
 
-namespace B3RAP_Leecher_v3
+namespace Nano_Scraper
 {
     public enum LogType
     {
         Info = 0,
         Success = 1,
-        Error = 2
+        Error = 2,
+        Warning = 3
     }
 
     public static class Utils
@@ -17,10 +18,11 @@ namespace B3RAP_Leecher_v3
         private static readonly ConsoleColor InfoColor = ConsoleColor.White;
         private static readonly ConsoleColor BadColor = ConsoleColor.Red;
         private static readonly ConsoleColor GoodColor = ConsoleColor.Green;
+        private static readonly ConsoleColor WarnColor = ConsoleColor.Yellow;
 
         public static void UpdateConsoleTitle()
         {
-            Console.Title = $"nαnσ scɾαρҽɾ v{Program.Version} " +
+            Console.Title = $"Nano Scraper v{Program.Version} " +
                 $"| Engine : {Program.engine} " +
                 $"| Website : {Program.website} " +
                 $"| Keyword : {Program.keyword} " +
@@ -91,10 +93,15 @@ namespace B3RAP_Leecher_v3
                 message = message.Insert(0, "[+] ");
                 message.ColorWriteLine(GoodColor);
             }
-            else
+            else if (type == 2)
             {
                 message = message.Insert(0, "[-] ");
                 message.ColorWriteLine(BadColor);
+            }
+            else if (type == 3)
+            {
+                message = message.Insert(0, "[/] ");
+                message.ColorWriteLine(WarnColor);
             }
         }
     }
