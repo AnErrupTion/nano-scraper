@@ -1,3 +1,6 @@
+# NEW VERSION - 10 TIMES BETTER
+https://github.com/NanoSoftwares/Scraper
+
 # nαnσ scɾαρҽɾ
 Nano Scraper, the next-generation web scraper!
 
